@@ -23,6 +23,7 @@ module.exports = (sequelize) => {
     emailAddress: {
       type: Sequelize.STRING,
       allowNull: false,
+      unique: true, //email address is used for credential authentication, so it should be unique.
     },
     password: {
       type: Sequelize.STRING,
