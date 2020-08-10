@@ -95,8 +95,13 @@ apiRouter.get('/', asyncHandler(async(req, res) => {
 //GET users 200 - COPMLETE
 
 apiRouter.get('/users', authenticationFunc, asyncHandler(async(req, res) => {
-  const users = await User.findAll({attributes: ['id', 'firstName', 'lastName', 'emailAddress']}); // filters out password, createdAt, and updatedAt
-  res.json(users);
+  const user = await User.findAll({
+    attributes: ['id', 'firstName', 'lastName', 'emailAddress'], // filters out password, createdAt, and updatedAt
+    where: {
+      emailAddress: req.currentUser.emailAddress //displays only the logged in user
+    }
+  });
+  res.json(user);
 }));
 
 //POST users 201 - completed
@@ -118,7 +123,7 @@ apiRouter.post('/users', userValidationChain, asyncHandler(async(req, res) => {
         emailAddress: req.body.emailAddress,
         password: bcryptjs.hashSync(req.body.password)
       })
-      res.status(201).location('/')
+      res.status(201).location('/').end();
     } catch(error) {
         res.status(500).json({
           message: "Sorry, there was an error",
@@ -168,7 +173,7 @@ apiRouter.post('/courses', authenticationFunc, courseValidationChain, asyncHandl
         materialsNeeded: req.body.materialsNeeded,
         userId: req.body.userId
       })
-      res.status(201).location(`/api/courses/${course.id}`)
+      res.status(201).location(`/api/courses/${course.id}`).end()
     } catch(error) {
       res.status(500).json({
         message:"Sorry, there was an error",
@@ -184,7 +189,7 @@ apiRouter.post('/courses', authenticationFunc, courseValidationChain, asyncHandl
 apiRouter.put('/courses/:id', authenticationFunc, courseValidationChain, asyncHandler(async(req, res) => {
   const errors = validationResult(req);
   const course = await Course.findByPk(req.params.id);
-  if(course.userID !== req.currentUser) {
+  if(course.userId !== req.currentUser.id) {
     res.status(403).json({message: "Forbidden: this isn't your course"})
   }
   if(course) {
@@ -222,7 +227,7 @@ apiRouter.put('/courses/:id', authenticationFunc, courseValidationChain, asyncHa
 
 apiRouter.delete('/courses/:id', authenticationFunc, asyncHandler(async(req, res) => {
   const course = await Course.findByPk(req.params.id);
-  if(course.userID !== req.currentUser) {
+  if(course.userId !== req.currentUser.id) {
     res.status(403).json({message: "Forbidden: this isn't your course"})
   }
   if(course){
