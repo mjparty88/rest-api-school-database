@@ -95,7 +95,7 @@ apiRouter.get('/', asyncHandler(async(req, res) => {
 //GET users 200 - COPMLETE
 
 apiRouter.get('/users', authenticationFunc, asyncHandler(async(req, res) => {
-  const users = await User.findAll();
+  const users = await User.findAll({attributes: ['id', 'firstName', 'lastName', 'emailAddress']}); // filters out password, createdAt, and updatedAt
   res.json(users);
 }));
 
