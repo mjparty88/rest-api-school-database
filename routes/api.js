@@ -21,35 +21,6 @@ function asyncHandler(cb){
   }
 }
 
-//authentication middleware
-const authenticationFunc = async function authenticateUser (req, res, next) {
-  const credentials = auth(req); // Parse the user's credentials from the Authorization header.
-  if (credentials) { // If the user's credentials are available...
-    const users = await User.findAll({attributes: ['id','emailAddress', 'password']});
-    const matchedUser = users.find(user => user.emailAddress === credentials.name); // Attempt to retrieve the user from the data store by their username (i.e. the user's "key" from the Authorization header).
-    if (matchedUser) { // If a user was successfully retrieved from the data store...
-      const authenticated = bcryptjs.compareSync(credentials.pass, matchedUser.password); //use bycrypt to compare the password from the auth header, against the matched users' password
-      if (authenticated) { // If the passwords match...
-        console.log(`Authentication successful for username: ${matchedUser.emailAddress}`);
-        req.currentUser = matchedUser; //add the user's details to the request object
-        next();
-      } else {
-        res.status(403).json({
-          message: "Forbidden: The password did not match the user credential."
-        })
-      }
-    } else {
-      res.status(403).json({
-        message: "Forbidden: No user matches the credential provided."
-      })
-    }
-  } else {
-    res.status(401).json({
-      message: "Unauthorized: No credentials provided in the WWW-authenticate header."
-    })
-  }
-}
-
 //middleware validation for the user resources (using express-validator)
 const userValidationChain = [
   check('firstName')
@@ -83,6 +54,35 @@ const courseValidationChain = [
     .exists({checkNull: true, checkFalsy: true}).withMessage("You must provide the id of the user this course belongs to")
     .isInt({ allow_leading_zeroes: false }).withMessage("You must provide a valid userId")
 ];
+
+//authentication middleware
+const authenticationFunc = async function authenticateUser (req, res, next) {
+  const credentials = auth(req); // Parse the user's credentials from the Authorization header.
+  if (credentials) { // If the user's credentials are available...
+    const users = await User.findAll({attributes: ['id','emailAddress', 'password']});
+    const matchedUser = users.find(user => user.emailAddress === credentials.name); // Attempt to retrieve the user from the data store by their username (i.e. the user's "key" from the Authorization header).
+    if (matchedUser) { // If a user was successfully retrieved from the data store...
+      const authenticated = bcryptjs.compareSync(credentials.pass, matchedUser.password); //use bycrypt to compare the password from the auth header, against the matched users' password
+      if (authenticated) { // If the passwords match...
+        console.log(`Authentication successful for username: ${matchedUser.emailAddress}`);
+        req.currentUser = matchedUser; //add the user's details to the request object
+        next();
+      } else {
+        res.status(403).json({
+          message: "Forbidden: The password did not match the user credential."
+        })
+      }
+    } else {
+      res.status(403).json({
+        message: "Forbidden: No user matches the credential provided."
+      })
+    }
+  } else {
+    res.status(401).json({
+      message: "Unauthorized: No credentials provided in the WWW-authenticate header."
+    })
+  }
+}
 
 
 //API routes will be held here
@@ -118,7 +118,7 @@ apiRouter.post('/users', userValidationChain, asyncHandler(async(req, res) => {
         emailAddress: req.body.emailAddress,
         password: bcryptjs.hashSync(req.body.password)
       })
-      res.status(201).json({ message: "Successfully created new user."})
+      res.status(201).location('/')
     } catch(error) {
         res.status(500).json({
           message: "Sorry, there was an error",
@@ -139,7 +139,7 @@ apiRouter.get('/courses', asyncHandler(async(req, res) => {
 //GET courses/:id 200 - completed
 
 apiRouter.get('/courses/:id', asyncHandler(async(req, res) => {
-  const course = await Course.findByPk(req.params.id);
+  const course = await Course.findByPk(req.params.id, {include: [{model: User, attributes: ["id","firstName","lastName", "emailAddress"]}]});
   if(course) {
     res.json(course);
   } else {
@@ -168,7 +168,7 @@ apiRouter.post('/courses', authenticationFunc, courseValidationChain, asyncHandl
         materialsNeeded: req.body.materialsNeeded,
         userId: req.body.userId
       })
-      res.status(201).json({ message: "Successfully created course" })
+      res.status(201).location(`/api/courses/${course.id}`)
     } catch(error) {
       res.status(500).json({
         message:"Sorry, there was an error",
@@ -184,6 +184,9 @@ apiRouter.post('/courses', authenticationFunc, courseValidationChain, asyncHandl
 apiRouter.put('/courses/:id', authenticationFunc, courseValidationChain, asyncHandler(async(req, res) => {
   const errors = validationResult(req);
   const course = await Course.findByPk(req.params.id);
+  if(course.userID !== req.currentUser) {
+    res.status(403).json({message: "Forbidden: this isn't your course"})
+  }
   if(course) {
     if(!errors.isEmpty()) {
       // Use the Array `map()` method to get a list of error messages.
@@ -219,6 +222,9 @@ apiRouter.put('/courses/:id', authenticationFunc, courseValidationChain, asyncHa
 
 apiRouter.delete('/courses/:id', authenticationFunc, asyncHandler(async(req, res) => {
   const course = await Course.findByPk(req.params.id);
+  if(course.userID !== req.currentUser) {
+    res.status(403).json({message: "Forbidden: this isn't your course"})
+  }
   if(course){
     try {
       await course.destroy();
