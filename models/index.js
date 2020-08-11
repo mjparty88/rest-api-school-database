@@ -33,6 +33,17 @@ Object.keys(db).forEach(modelName => {
   }
 });
 
+// async IIFE
+(async () => {
+  try {
+    await sequelize.authenticate();
+    console.log('Database connection successfully established.');
+  } catch (error) {
+    console.error('Unable to connect to the database:', error);
+  }
+})();
+
+
 db.sequelize = sequelize;
 db.Sequelize = Sequelize;
 
