@@ -3,7 +3,6 @@ const apiRouter = express.Router()
 const User = require('../models').User
 const Course = require('../models').Course
 const bcryptjs = require('bcryptjs');
-const auth = require('basic-auth');
 const { validationResult } = require('express-validator');
 const {userValidationChain} = require('../validation/userValidation');
 const {courseValidationChain} = require('../validation/courseValidation');
@@ -23,10 +22,6 @@ function asyncHandler(cb){
     }
   }
 }
-
-
-
-
 //API routes will be held here
 apiRouter.get('/', asyncHandler(async(req, res) => {
   res.json({
@@ -113,7 +108,7 @@ apiRouter.post('/courses', authenticationFunc, courseValidationChain, asyncHandl
         description: req.body.description,
         estimatedTime: req.body.estimatedTime,
         materialsNeeded: req.body.materialsNeeded,
-        userId: req.currentUser.id //the authenticated user creating the course is the only person allowed to edit it
+        userId: req.currentUser.id //the authenticated user is set to the course owner
       })
       res.status(201).location(`/api/courses/${course.id}`).end()
     } catch(error) {
@@ -147,7 +142,7 @@ apiRouter.put('/courses/:id', authenticationFunc, courseValidationChain, asyncHa
             description: req.body.description,
             estimatedTime: req.body.estimatedTime,
             materialsNeeded: req.body.materialsNeeded,
-            userId: req.body.userId
+            userId: req.currentUser.id ////the authenticated user is only person allowed to edit the course, and shouldn't be able to reassign ownership of the course
           })
           res.status(204).json({
               message: "Thank you. The record was successfully updated."
