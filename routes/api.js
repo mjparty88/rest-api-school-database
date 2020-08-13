@@ -119,7 +119,7 @@ apiRouter.post('/courses', authenticationFunc, courseValidationChain, asyncHandl
       })
       res.status(201).location(`/api/courses/${course.id}`).end()
     } catch(error) {
-      res.status(500).json({
+      res.status(400).json({
         message:"Sorry, there was an error",
         name: error.name,
         description: error.message
@@ -155,7 +155,7 @@ apiRouter.put('/courses/:id', authenticationFunc, courseValidationChain, asyncHa
               message: "Thank you. The record was successfully updated."
           });
         } catch(error) {
-          res.status(500).json({
+          res.status(400).json({ 
           message: "Sorry, there was an error",
           name: error.name,
           description: error.message
