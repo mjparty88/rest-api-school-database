@@ -74,14 +74,21 @@ apiRouter.post('/users', userValidationChain, asyncHandler(async(req, res) => {
 //GET courses 200 - completed
 
 apiRouter.get('/courses', asyncHandler(async(req, res) => {
-  const course = await Course.findAll();
+  const course = await Course.findAll({attributes: ['id', 'title', 'description', 'estimatedTime', 'materialsNeeded', 'userId']});
   res.json(course);
 }));
 
 //GET courses/:id 200 - completed
 
 apiRouter.get('/courses/:id', asyncHandler(async(req, res) => {
-  const course = await Course.findByPk(req.params.id, {include: [{model: User, attributes: ["id","firstName","lastName", "emailAddress"]}]});
+  const course = await Course.findByPk(req.params.id, {
+    attributes: ['id', 'title', 'description', 'estimatedTime', 'materialsNeeded'],
+    include: [{
+      model: User,
+      as: 'user',
+      attributes: ["id","firstName","lastName", "emailAddress"]
+    }]
+  });
   if(course) {
     res.json(course);
   } else {
